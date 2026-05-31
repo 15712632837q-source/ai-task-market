@@ -3,9 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function ChatPage({ params }: { params: Promise<{ taskId: string; userId: string }> }) {
   const router = useRouter()
@@ -153,7 +150,7 @@ export default function ChatPage({ params }: { params: Promise<{ taskId: string;
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center text-gray-400">
+        <div className="text-center text-gray-600">
           <div className="text-4xl mb-3 animate-pulse">⏳</div>
           <p>加载中...</p>
         </div>
@@ -164,29 +161,27 @@ export default function ChatPage({ params }: { params: Promise<{ taskId: string;
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col h-[calc(100vh-80px)]">
       {/* 顶部任务信息 */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 shadow-sm">
-        <p className="text-xs text-gray-400 mb-1">关于任务</p>
-        <p className="font-medium text-gray-900">{task?.title}</p>
-        <p className="text-blue-600 text-sm font-bold">¥{Number(task?.budget ?? 0).toFixed(0)}</p>
-        <button onClick={() => router.push(`/tasks/${taskId}`)} className="text-xs text-blue-500 hover:underline mt-1">
+      <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 mb-4">
+        <p className="text-xs text-gray-600 mb-1">关于任务</p>
+        <p className="font-medium text-white">{task?.title}</p>
+        <p className="text-blue-400 text-sm font-bold">¥{Number(task?.budget ?? 0).toFixed(0)}</p>
+        <button onClick={() => router.push(`/tasks/${taskId}`)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors mt-1">
           查看任务详情 →
         </button>
       </div>
 
       {/* 对话标题 */}
       <div className="flex items-center gap-2 mb-3">
-        <Avatar className="w-8 h-8">
-          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-            {otherUser?.username?.[0]}
-          </AvatarFallback>
-        </Avatar>
-        <span className="font-medium text-gray-800">与 {otherUser?.username} 的私信</span>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+          {otherUser?.username?.[0]}
+        </div>
+        <span className="font-medium text-gray-300">与 {otherUser?.username} 的私信</span>
       </div>
 
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto space-y-3 pb-2">
         {messages.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-gray-600">
             <p className="text-3xl mb-2">💬</p>
             <p className="text-sm">还没有消息，发送第一条吧</p>
           </div>
@@ -196,9 +191,11 @@ export default function ChatPage({ params }: { params: Promise<{ taskId: string;
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm transition-opacity ${
                 msg._temp ? 'opacity-60' : 'opacity-100'
-              } ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
+              } ${isMe
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-sm'
+                : 'bg-white/[0.06] text-gray-200 rounded-bl-sm border border-white/[0.08]'}`}>
                 <p>{msg.content}</p>
-                <p className={`text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
+                <p className={`text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500'}`}>
                   {new Date(msg.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -209,17 +206,18 @@ export default function ChatPage({ params }: { params: Promise<{ taskId: string;
       </div>
 
       {/* 输入框 */}
-      <form onSubmit={handleSend} className="flex gap-2 pt-3 border-t border-gray-100">
-        <Input
+      <form onSubmit={handleSend} className="flex gap-2 pt-3 border-t border-white/[0.06]">
+        <input
           placeholder="输入消息..."
           value={content}
           onChange={e => setContent(e.target.value)}
-          className="flex-1"
           autoComplete="off"
+          className="flex-1 px-4 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors text-sm"
         />
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={sending || !content.trim()}>
+        <button type="submit" disabled={sending || !content.trim()}
+          className="px-5 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:opacity-90 transition-opacity disabled:opacity-40 text-sm">
           发送
-        </Button>
+        </button>
       </form>
     </div>
   )
