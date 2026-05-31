@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className="h-full antialiased">
-      <body suppressHydrationWarning className="min-h-full flex flex-col bg-gray-50 pb-16 md:pb-0" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif' }}>
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#0f0f1a] pb-16 md:pb-0" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif' }}>
         <Navbar />
         {children}
       </body>
