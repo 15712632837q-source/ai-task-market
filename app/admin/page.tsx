@@ -15,20 +15,24 @@ export default function AdminPage() {
   const [recharges, setRecharges]   = useState<any[]>([])
   const [disputes, setDisputes]     = useState<any[]>([])
   const [allVotes, setAllVotes]     = useState<any[]>([])
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [resolving, setResolving]   = useState<string | null>(null)
+  const [processing, setProcessing]                     = useState<string | null>(null)
+  const [resolving, setResolving]                       = useState<string | null>(null)
+  const [withdrawals, setWithdrawals]                   = useState<any[]>([])
+  const [processingWithdrawal, setProcessingWithdrawal] = useState<string | null>(null)
 
   const loadAll = async (supabase: any) => {
-    const [{ data: s }, { data: r }, { data: d }, { data: v }] = await Promise.all([
+    const [{ data: s }, { data: r }, { data: d }, { data: v }, { data: w }] = await Promise.all([
       supabase.rpc('get_platform_stats'),
       supabase.rpc('get_recharge_requests'),
       supabase.from('tasks').select('*, dispatcher:profiles!dispatcher_id(id,username), receiver:profiles!receiver_id(id,username)').eq('status', 'disputed').order('created_at', { ascending: false }),
       supabase.from('dispute_votes').select('task_id, vote'),
+      supabase.rpc('get_withdrawal_requests'),
     ])
     setStats(s)
     setRecharges(Array.isArray(r) ? r : [])
     setDisputes(Array.isArray(d) ? d : [])
     setAllVotes(Array.isArray(v) ? v : [])
+    setWithdrawals(Array.isArray(w) ? w : [])
   }
 
   useEffect(() => {
@@ -56,6 +60,22 @@ export default function AdminPage() {
     await supabase.rpc('reject_recharge', { p_request_id: id })
     await loadAll(supabase)
     setProcessing(null)
+  }
+
+  const handleApproveWithdrawal = async (id: string) => {
+    setProcessingWithdrawal(id)
+    const supabase = createClient()
+    await supabase.rpc('approve_withdrawal', { p_request_id: id })
+    await loadAll(supabase)
+    setProcessingWithdrawal(null)
+  }
+
+  const handleRejectWithdrawal = async (id: string) => {
+    setProcessingWithdrawal(id)
+    const supabase = createClient()
+    await supabase.rpc('reject_withdrawal', { p_request_id: id })
+    await loadAll(supabase)
+    setProcessingWithdrawal(null)
   }
 
   const handleResolve = async (taskId: string, winner: 'receiver' | 'dispatcher') => {
@@ -110,7 +130,7 @@ export default function AdminPage() {
       </div>
 
       {/* 总收益卡片 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
             <div className="text-4xl font-bold text-green-600">¥{Number(stats?.total ?? 0).toFixed(2)}</div>
@@ -121,6 +141,12 @@ export default function AdminPage() {
           <CardContent className="pt-6 text-center">
             <div className="text-4xl font-bold text-blue-600">{pendingRecharges.length}</div>
             <div className="text-sm text-gray-500 mt-2">待审核充值申请</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <div className="text-4xl font-bold text-purple-600">{withdrawals.filter(w => w.status === 'pending').length}</div>
+            <div className="text-sm text-gray-500 mt-2">待审核提现申请</div>
           </CardContent>
         </Card>
         <Card>
@@ -138,6 +164,14 @@ export default function AdminPage() {
             {pendingRecharges.length > 0 && (
               <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
                 {pendingRecharges.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="withdrawal">
+            提现审核
+            {withdrawals.filter(w => w.status === 'pending').length > 0 && (
+              <span className="ml-1.5 bg-purple-500 text-white text-xs rounded-full px-1.5 py-0.5">
+                {withdrawals.filter(w => w.status === 'pending').length}
               </span>
             )}
           </TabsTrigger>
@@ -214,6 +248,68 @@ export default function AdminPage() {
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${r.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                         {r.status === 'approved' ? '已通过' : '已拒绝'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* 提现审核 */}
+        <TabsContent value="withdrawal" className="mt-4 space-y-4">
+          {withdrawals.filter(w => w.status === 'pending').length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <p className="text-4xl mb-3">✅</p>
+              <p>暂无待审核提现申请</p>
+            </div>
+          ) : withdrawals.filter(w => w.status === 'pending').map(w => (
+            <Card key={w.id} className="border-purple-200">
+              <CardContent className="pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="font-medium text-gray-900">
+                      <span className="text-blue-600">{w.username}</span> 申请提现
+                      <span className="text-purple-600 font-bold ml-2">¥{Number(w.amount).toFixed(2)}</span>
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      打款到 <span className="font-medium">{w.pay_type === 'alipay' ? '支付宝' : '微信'}</span>：
+                      <span className="font-mono text-gray-800 select-all ml-1">{w.pay_account}</span>
+                    </p>
+                    {w.note && <p className="text-xs text-gray-400">备注：{w.note}</p>}
+                    <p className="text-xs text-gray-400">{new Date(w.created_at).toLocaleString('zh-CN')}</p>
+                  </div>
+                  <div className="flex flex-col gap-2 min-w-[80px]">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700"
+                      onClick={() => handleApproveWithdrawal(w.id)} disabled={processingWithdrawal === w.id}>
+                      已打款
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={() => handleRejectWithdrawal(w.id)} disabled={processingWithdrawal === w.id}>
+                      拒绝
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {withdrawals.filter(w => w.status !== 'pending').length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-gray-500">已处理记录</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {withdrawals.filter(w => w.status !== 'pending').map(w => (
+                    <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">{w.username}</span>
+                        <span className="text-gray-400 ml-2">{w.pay_type === 'alipay' ? '支付宝' : '微信'} {w.pay_account}</span>
+                        <span className="text-gray-400 ml-2">¥{Number(w.amount).toFixed(2)}</span>
+                        <span className="text-gray-400 ml-2 text-xs">{new Date(w.created_at).toLocaleDateString('zh-CN')}</span>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${w.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {w.status === 'approved' ? '已打款' : '已拒绝'}
                       </span>
                     </div>
                   ))}

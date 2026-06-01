@@ -20,11 +20,18 @@ const rechargeStatusMap: Record<string, { label: string; color: string }> = {
   rejected: { label: '已拒绝', color: 'bg-red-500/15 text-red-400' },
 }
 
+const withdrawalStatusMap: Record<string, { label: string; color: string }> = {
+  pending:  { label: '审核中', color: 'bg-yellow-500/15 text-yellow-400' },
+  approved: { label: '已打款', color: 'bg-green-500/15 text-green-400' },
+  rejected: { label: '已拒绝', color: 'bg-red-500/15 text-red-400' },
+}
+
 const TABS = [
   { key: 'my-tasks', label: '我发布的任务' },
   { key: 'my-orders', label: '我接的单' },
   { key: 'wallet', label: '钱包流水' },
   { key: 'recharge', label: '充值钱包' },
+  { key: 'withdraw', label: '提现' },
   { key: 'profile', label: '个人资料' },
 ]
 
@@ -53,14 +60,23 @@ export default function DashboardPage() {
   const [submitting, setSubmitting] = useState(false)
   const [rechargeMsg, setRechargeMsg] = useState('')
 
+  const [withdrawalHistory, setWithdrawalHistory]   = useState<any[]>([])
+  const [withdrawAmount, setWithdrawAmount]         = useState('')
+  const [withdrawType, setWithdrawType]             = useState<'alipay' | 'wechat'>('alipay')
+  const [withdrawAccount, setWithdrawAccount]       = useState('')
+  const [withdrawNote, setWithdrawNote]             = useState('')
+  const [withdrawSubmitting, setWithdrawSubmitting] = useState(false)
+  const [withdrawMsg, setWithdrawMsg]               = useState('')
+
   const loadData = async (uid: string) => {
     const supabase = createClient()
-    const [r0, r1, r2, r3, r4] = await Promise.all([
+    const [r0, r1, r2, r3, r4, r5] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
       supabase.from('tasks').select('*').eq('dispatcher_id', uid).order('created_at', { ascending: false }),
       supabase.from('tasks').select('*, dispatcher:profiles!dispatcher_id(username)').eq('receiver_id', uid).order('created_at', { ascending: false }),
       supabase.from('wallet_transactions').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
       supabase.from('recharge_requests').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+      supabase.from('withdrawal_requests').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
     ])
     const prof = r0.data
     setProfile(prof)
@@ -70,6 +86,7 @@ export default function DashboardPage() {
     setMyOrders(r2.data ?? [])
     setTransactions(r3.data ?? [])
     setRechargeHistory(r4.data ?? [])
+    setWithdrawalHistory(r5.data ?? [])
   }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -120,6 +137,28 @@ export default function DashboardPage() {
       await loadData(userId)
     }
     setSubmitting(false)
+  }
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!withdrawAmount || Number(withdrawAmount) < 10) { setWithdrawMsg('最低提现金额为 ¥10'); return }
+    if (Number(withdrawAmount) > Number(profile?.wallet_balance ?? 0)) { setWithdrawMsg('提现金额不能超过钱包余额'); return }
+    if (!withdrawAccount.trim()) { setWithdrawMsg('请填写收款账号'); return }
+    setWithdrawSubmitting(true); setWithdrawMsg('')
+    const supabase = createClient()
+    const { error } = await supabase.from('withdrawal_requests').insert({
+      user_id: userId,
+      amount: Number(withdrawAmount),
+      pay_type: withdrawType,
+      pay_account: withdrawAccount.trim(),
+      note: withdrawNote.trim() || null,
+    })
+    if (error) { setWithdrawMsg('提交失败，请重试') } else {
+      setWithdrawMsg('申请已提交，1-3 个工作日内打款')
+      setWithdrawAmount(''); setWithdrawAccount(''); setWithdrawNote('')
+      await loadData(userId)
+    }
+    setWithdrawSubmitting(false)
   }
 
   // ── dark input / textarea shared classes ──
@@ -318,6 +357,92 @@ export default function DashboardPage() {
                         </div>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${rechargeStatusMap[r.status]?.color}`}>
                           {rechargeStatusMap[r.status]?.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 提现 */}
+          {tab === 'withdraw' && (
+            <div className="space-y-4">
+              <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
+                <p className="font-medium text-white mb-1">可提现余额</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  ¥{Number(profile?.wallet_balance ?? 0).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">最低提现 ¥10，1-3 个工作日内手动打款</p>
+              </div>
+
+              <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-white mb-4">申请提现</h3>
+                <form onSubmit={handleWithdraw} className="space-y-4">
+                  <div>
+                    <label className="text-sm text-gray-400 block mb-1.5">收款方式</label>
+                    <div className="flex gap-2">
+                      {(['alipay', 'wechat'] as const).map(type => (
+                        <button key={type} type="button" onClick={() => setWithdrawType(type)}
+                          className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                            withdrawType === type
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-transparent'
+                              : 'bg-white/[0.04] border-white/10 text-gray-400 hover:text-white'
+                          }`}>
+                          {type === 'alipay' ? '支付宝' : '微信'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 block mb-1.5">
+                      {withdrawType === 'alipay' ? '支付宝' : '微信'}账号
+                    </label>
+                    <input placeholder={`请输入${withdrawType === 'alipay' ? '支付宝' : '微信'}账号或手机号`}
+                      value={withdrawAccount} onChange={e => setWithdrawAccount(e.target.value)}
+                      required className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 block mb-1.5">提现金额（元）</label>
+                    <input type="number" min="10" step="0.01" placeholder="最低 ¥10"
+                      value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)}
+                      required className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 block mb-1.5">备注（可选）</label>
+                    <input placeholder="例如：收款人真实姓名" value={withdrawNote}
+                      onChange={e => setWithdrawNote(e.target.value)} className={inputCls} />
+                  </div>
+                  {withdrawMsg && (
+                    <p className={`text-sm px-3 py-2 rounded-lg ${
+                      withdrawMsg.includes('失败') || withdrawMsg.includes('不能') || withdrawMsg.includes('最低')
+                        ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
+                    }`}>{withdrawMsg}</p>
+                  )}
+                  <button type="submit" disabled={withdrawSubmitting}
+                    className="w-full py-2.5 rounded-xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:opacity-90 transition-opacity disabled:opacity-50">
+                    {withdrawSubmitting ? '提交中...' : '申请提现'}
+                  </button>
+                </form>
+              </div>
+
+              {withdrawalHistory.length > 0 && (
+                <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
+                  <h3 className="text-sm font-semibold text-white mb-4">申请记录</h3>
+                  <div className="space-y-3">
+                    {withdrawalHistory.map(w => (
+                      <div key={w.id} className="flex items-center justify-between py-2.5 border-b border-white/[0.05] last:border-0">
+                        <div>
+                          <p className="text-sm font-medium text-gray-300">
+                            {w.pay_type === 'alipay' ? '支付宝' : '微信'} {w.pay_account}
+                            <span className="text-gray-500 ml-2">· ¥{Number(w.amount).toFixed(2)}</span>
+                          </p>
+                          {w.note && <p className="text-xs text-gray-600 mt-0.5">备注：{w.note}</p>}
+                          <p className="text-xs text-gray-600 mt-0.5">{new Date(w.created_at).toLocaleString('zh-CN')}</p>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${withdrawalStatusMap[w.status]?.color}`}>
+                          {withdrawalStatusMap[w.status]?.label}
                         </span>
                       </div>
                     ))}
