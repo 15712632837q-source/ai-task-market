@@ -308,8 +308,8 @@ export default function DashboardPage() {
               <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5">
                 <p className="font-medium text-white mb-3">转账方式</p>
                 <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-sm space-y-1.5">
-                  <p className="text-gray-400">微信：<span className="font-medium text-white select-all">15712632837</span></p>
-                  <p className="text-gray-400">支付宝：<span className="font-medium text-white select-all">15712632837</span></p>
+                  <p className="text-gray-400">微信：<span className="font-medium text-white select-all">{process.env.NEXT_PUBLIC_RECHARGE_WECHAT ?? '请联系管理员'}</span></p>
+                  <p className="text-gray-400">支付宝：<span className="font-medium text-white select-all">{process.env.NEXT_PUBLIC_RECHARGE_ALIPAY ?? '请联系管理员'}</span></p>
                   <p className="text-gray-600 text-xs mt-2">转账时备注"充值"，转账后上传截图提交申请，管理员确认后自动到账。</p>
                 </div>
               </div>
