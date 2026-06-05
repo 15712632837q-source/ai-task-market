@@ -14,6 +14,27 @@
 
 [🌐 在线 Demo](https://aitaskyard.com) · [📖 快速开始](#-本地运行) · [🤝 贡献](#-贡献)
 
+![平台首页](https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-home.png)
+
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-tasks.png" alt="任务大厅"/></td>
+    <td><img src="https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-detail.png" alt="任务详情"/></td>
+  </tr>
+  <tr>
+    <td align="center">任务大厅</td>
+    <td align="center">任务详情 & 接单</td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-dashboard.png" alt="我的工作台"/></td>
+    <td><img src="https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-tasks.png" alt="任务筛选"/></td>
+  </tr>
+  <tr>
+    <td align="center">我的工作台</td>
+    <td align="center">分类筛选</td>
+  </tr>
+</table>
+
 </div>
 
 ---
