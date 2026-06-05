@@ -12,7 +12,7 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[🌐 在线 Demo](https://aitaskyard.com) · [📖 快速开始](#-本地运行) · [🤝 贡献](#-贡献)
+[🌐 在线 Demo](https://aitaskyard.com) · [📖 快速开始](#-本地运行) · [📝 掘金文章](https://juejin.cn/post/7647784370971525171) · [🤝 贡献](#-贡献)
 
 ![平台首页](https://raw.githubusercontent.com/15712632837q-source/ai-task-market/main/public/screenshot-home.png)
 
